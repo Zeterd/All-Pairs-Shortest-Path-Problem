@@ -46,13 +46,23 @@ int main(int argc, char *argv[]) {
     q = sqrt(numprocs);
 
     if(mat_d%q == 0){
-      printf("Error in modulo\n");
+      printf("Algorithm not apply, Aborting!!!\n");
+      MPI_Finalize();
       return;
+
+      //Dividir a matriz
+
     }
 
-    for(int i=1; i<=mat_d; i++){
-        
-    }
+    //Operaçao para todos os processos fazer(multiplicaçao)
+
+    //======
+
+    //Operaçao de agregaçao dos dados de cada processo para a ROOT --> MPI_GATHER
+
+
+
+
 
 
 
