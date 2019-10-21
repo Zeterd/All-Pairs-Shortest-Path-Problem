@@ -50,7 +50,6 @@ int main() {
     int **new_mat;
 
     new_mat = matrix;
-    //printMatriz(mat_d, new_mat);
 
     while(m<n_rows-1){
         new_mat = matrix_sum(new_mat, new_mat, mat_d);
@@ -71,22 +70,18 @@ int **matrix_sum(int **matrix, int **matrix2, int dim){
 
     for(i = 1; i <= dim; i++) {
         matrix3[i] = (int*)malloc(sizeof(int*) * dim+1);
-    }
-
-    //printf("ESTOU AQUUII\n");
+    }    
 
     for(i = 1; i <= dim; i++){
         for(j = 1; j <= dim; j++){
             matrix3[i][j] = MAX_VALUE;
-            //printf("%d\n", matrix3[i][j]);
             for(k = 1; k <= dim; k++){
-                //printf("cij:%d  aik:%d   bkj:%d\n", matrix3[i][j], matrix[i][k], matrix2[k][j]);
                 matrix3[i][j] = minValue(matrix3[i][j], (matrix[i][k]+matrix2[k][j]));
-                //printf("minvalue:%d\n\n\n", matrix3[i][j]);
+
             }
         }
     }
-    //printMatriz(dim, matrix3);
+
     return matrix3;
 
 }
