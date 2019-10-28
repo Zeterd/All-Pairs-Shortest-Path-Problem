@@ -70,7 +70,9 @@ int **matrix_sum(int **matrix, int **matrix2, int dim){
 
     for(i = 1; i <= dim; i++) {
         matrix3[i] = (int*)malloc(sizeof(int*) * dim+1);
-    }    
+    }
+
+
 
     for(i = 1; i <= dim; i++){
         for(j = 1; j <= dim; j++){

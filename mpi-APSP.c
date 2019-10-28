@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <mpi.h>
 #include <math.h>
+#include "aux.h"
 
 #define ROOT 0
 
@@ -31,28 +32,39 @@ int** createMatrix(int mat_d){
     return matrix;
 }
 
+//Verify if is possible to construct matix
+int flag_func(int p, int n){
+    if(n%sqrt(p) != 0 || floor(sqrt(p)) != sqrt(p)){
+        printf("Algorithm not apply, Aborting!!!\n");
+        return 0;
+    }
+    else
+      return 1;
+}
+
+
 int main(int argc, char *argv[]) {
-    int numprocs, rank, q, mat_d, **matrix;
+    int n_procs, rank, q, mat_d, **matrix, f=0;
 
     MPI_Init(&argc, &argv);                                                                                                               │
-    MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
+    MPI_Comm_size(MPI_COMM_WORLD, &n_procs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     if(rank == ROOT){
       scanf("%d", &mat_d);
-      createMatrix(mat_d);
+
+      if(flag_func(n_procs, mat_d) == 1)
+        f=1;
     }
 
-    q = sqrt(numprocs);
+    //set the flag to the others processors
+    MPI_Bcast(&f, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
 
-    if(mat_d%q == 0){
-      printf("Algorithm not apply, Aborting!!!\n");
-      MPI_Finalize();
-      return;
-
-      //Dividir a matriz
-
+    if(f != 1){
+        create_grid(&grid);
     }
+
+
 
     //Operaçao para todos os processos fazer(multiplicaçao)
 
