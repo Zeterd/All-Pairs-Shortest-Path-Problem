@@ -5,6 +5,7 @@
 #include "aux.h"
 
 #define ROOT 0
+#define INFINITO 99999
 
 int** createMatrix(int mat_d){
     int **matrix;
@@ -21,7 +22,7 @@ int** createMatrix(int mat_d){
           scanf("%d", &num);
 
           if(num == 0 && i != j){
-            matrix[i][j] = MAX_VALUE; //Meter no futuro +INFINITO
+            matrix[i][j] = INFINITO; //Meter no futuro +INFINITO
           }
           else{
             matrix[i][j] = num;
@@ -42,6 +43,20 @@ int flag_func(int p, int n){
       return 1;
 }
 
+int create_grid(GRID_TYPE *grid){
+    MPI_Comm_size(MPI_COMM_WORLD, &(grid->p));
+
+    //???
+
+}
+
+MATRIX* malloc_matrix(int dim){
+    MATRIX* tmp = (MATRIX*malloc(sizeof(MATRIX)));
+    tmp->dim = dim;
+    //Falta alocar a matrix em memoria
+
+    return tmp;
+}
 
 int main(int argc, char *argv[]) {
     int n_procs, rank, q, mat_d, **matrix, f=0;
@@ -57,12 +72,25 @@ int main(int argc, char *argv[]) {
         f=1;
     }
 
+
     //set the flag to the others processors
     MPI_Bcast(&f, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
 
     if(f != 1){
+        MPI_Bcast(&mat_d, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
         create_grid(&grid);
+
+        if(my_rank == ROOT){
+            matrix = createMatrix(mat_d);
+        }
     }
+
+    MPI_Bcast(&(matrix[0][0]), mat_d, MPI_INT, ROOT, MPI_COMM_WORLD);
+
+    half_dim = mat_d/grid->q;
+    matrix1 = malloc_matrix(half_dim);
+
+
 
 
 
