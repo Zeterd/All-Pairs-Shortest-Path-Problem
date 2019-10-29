@@ -103,10 +103,37 @@ MATRIX* malloc_MATRIX(int dim){
     return tmp;
 }
 
+//Implementation of the FOX algorithm
+void fox(GRID_TYPE* grid, MATRIX* m1, MATRIX* m2, MATRIX* m3, int dim){
+    int org, dest, i, root;
+
+
+    org = (grid->my_row+1) % grid->q;
+    dest = (grid->my_row + grid->q-1) % grid->q;
+
+    m_tmp = malloc_MATRIX(dim);
+    for(i=0; i<grid->q-1; i++){
+        root = (grid->my_row+i)%grid->q;
+        if(root == grid->my_col){
+            MPI_Bcast(&(m1->entries[0][0]), dim*dim, MPI_INT, root, grid->row_comm);
+            operation_multiply(m1,m2,m3);
+        }
+        else{
+            MPI_Bcast(&(m_tmp->entries[0][0]), dim*dim, MPI_INT, root, grid->row_comm);
+            operation_multiply(m_tmp,m2,m3);
+        }
+
+        MPI_Send(&(m2->entries[0][0]), dim*dim, MPI_INT, dest, 0, grid->col_comm);
+        MPI_Recv(&(m2->entries[0][0]), dim*dim, MPI_INT, org, 0, grid->col_comm, MPI_STATUS_IGNORE);
+  
+    }
+}
+
+
 //This is the main :/
 int main(int argc, char *argv[]) {
     GRID_TYPE grid;
-    MATRIX *matrix1;
+    MATRIX *matrix_1, *matrix_2;
     int half_dim;
     int n_procs, rank, q, mat_d, **matrix, f=0;
 
@@ -137,24 +164,25 @@ int main(int argc, char *argv[]) {
     MPI_Bcast(&(matrix[0][0]), mat_d, MPI_INT, ROOT, MPI_COMM_WORLD);
 
     half_dim = mat_d/grid.q;
-    matrix1 = malloc_MATRIX(half_dim);
+    matrix_1 = malloc_MATRIX(half_dim);
+    matrix_2 = malloc_MATRIX(half_dim);
+    matrix_3 = malloc_MATRIX(half_dim);
+
+    get_submatrix(matrix, &grid, matrix_1)
+
+    matrix_2->entries = copy_matrix(matrix_1, half_dim);
+    fill_matrix(matrix_3, INFINITO);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    start = MPI_Wtime();
+
+    //the "start" of execution of the algorithm
+    int i;
+    for(i=1; i<mat_d-1; i*=2){
+        fox(&grid, matrix_1, matrix_2, matrix_3, half_dim);
 
 
 
-
-
-
-    //Operaçao para todos os processos fazer(multiplicaçao)
-
-    //======
-
-    //Operaçao de agregaçao dos dados de cada processo para a ROOT --> MPI_GATHER
-
-
-
-
-
-
-
+    }
 
 }
