@@ -43,11 +43,40 @@ int flag_func(int p, int n){
       return 1;
 }
 
+//Creation of the grid
 int create_grid(GRID_TYPE *grid){
+    int dim[2], vect_flag[2], coor[2], coor2[2];
+
     MPI_Comm_size(MPI_COMM_WORLD, &(grid->p));
 
-    //???
+    grid->q = (int)sqrt(grid->p);
+    dim[0] = grid->q;
+    dim[1] = grid->q;
 
+    vect_flag[0] = 1;
+    vect_flag[1] = 1;
+
+    //Makes a new communicator to which topology information has been attached
+    MPI_Cart_create(MPI_COMM_WORLD, 2, dim, vect_flag, 1, &(grid->comm));
+    MPI_Comm_rank(grid->comm, &(grid->my_rank));
+
+    //Determines process coords in cartesian topology given rank in group
+    MPI_Cart_coords(grid->comm, grid->my_rank, 2, coor);
+
+    grid->my_row = coor[0];
+    grid->my_col = coor[1];
+
+    //ROW_COMM_WORLD
+    coor2[0] = 0;
+    coor2[1] = 1;
+
+    //Partitions a communicator into subgroups which form lower-dimensional cartesian subgrids
+    MPI_Cart_sub(grid->comm, coor2, &(grid->row_comm));
+
+    //COLUMN_COMM_WORLD
+    coor2[0] = 1;
+    coor2[1] = 0;
+    MPI_Cart_sub(grid->comm, coor2, &(grid->col_comm))
 }
 
 MATRIX* malloc_matrix(int dim){
