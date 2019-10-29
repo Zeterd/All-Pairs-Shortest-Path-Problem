@@ -21,6 +21,19 @@ void malloc_matrix(int ***matrix, int dim){
     }
 }
 
+//The operation to multiply the values
+void operation_multiply(MATRIX* m1, MATRIX* m2, MATRIX* m3){
+    int i,j,k;
+
+    for(i=0; i<m1->dim; i++){
+        for(j=0; j<m1->dim; j++){
+            for(k=0; k<m2->dim; k++){
+              if((m1->entries[i][k]+m2->entries[k][j])<m3->entries[i][j])
+                m3->entries[i][j] = m1->entries[i][k]+m2->entries[k][j];
+            }
+        }
+    }
+}
 
 int** createMatrix(int mat_d){
     int **matrix;
@@ -51,7 +64,8 @@ int** createMatrix(int mat_d){
 
 //Verify if is possible to construct matix
 int flag_func(int p, int n){
-    if((n%(int)sqrt(p)) != 0 || floor(sqrt(p)) != sqrt(p)){
+
+    if((n%(int)sqrt(p)) != 0 || floor(sqrt(p)) != (int)sqrt(p)){
         printf("Algorithm not apply, Aborting!!!\n");
         return 0;
     }
@@ -60,7 +74,7 @@ int flag_func(int p, int n){
 }
 
 //Creation of the grid
-int create_grid(GRID_TYPE *grid){
+void create_grid(GRID_TYPE *grid){
     int dim[2], vect_flag[2], coor[2], coor2[2];
 
     MPI_Comm_size(MPI_COMM_WORLD, &(grid->procs));
@@ -141,13 +155,13 @@ void print_matrix(int **m, int dim){
     }
 }
 //Basacly the name explains it self
-void copy_matrix(int **m, int dim){
+int** copy_matrix(int **m, int dim){
     int **m_tmp, i, j;
     malloc_matrix(&m_tmp, dim);
 
     for(i=0; i<dim; i++){
         for(j=0; j<dim; j++){
-            m_tmp[i][j] = m[i][j]
+            m_tmp[i][j] = m[i][j];
         }
     }
     return m_tmp;
@@ -169,33 +183,22 @@ void fill_matrix(MATRIX* m, int v){
 
     for(i=0; i<m->dim; i++){
       for(j=0; j<m->dim; j++){
-          m->entries8[i][j] = v;
+          m->entries[i][j] = v;
       }
     }
 }
 
-//The operation to multiply the values
-void operation_multiply(MATRIX* m1, MATRIX* m2, MATRIX* m3){
-    int i,j,k;
 
-    for(i=0; i<m1->dim; i++){
-        for(j=0; j<m1->dim; j++){
-            for(k=0; k<m2->dim; k++){
-              if((m1->entries[i][k]+m2->entries[k][j])<m3->entries[i][j])
-                m3->entries[i][j] = m1->entries[i][k]+m2->entries[k][j];
-            }
-        }
-    }
-}
 
 //This is the main :/
 int main(int argc, char *argv[]) {
     GRID_TYPE grid;
     MATRIX *matrix_1, *matrix_2, *matrix_3;
-    int half_dim, start, finish;
-    int n_procs, rank, q, mat_d, **matrix, **matrix_res, f=0;
+    int half_dim;
+    double finish, start;
+    int n_procs, rank, mat_d, **matrix, **matrix_res, f=0;
 
-    MPI_Init(&argc, &argv);                                                                                                               │
+    MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &n_procs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
@@ -226,9 +229,9 @@ int main(int argc, char *argv[]) {
     matrix_2 = malloc_MATRIX(half_dim);
     matrix_3 = malloc_MATRIX(half_dim);
 
-    get_submatrix(matrix, &grid, matrix_1);
+    submatrix(matrix, &grid, matrix_1);
 
-    matrix_2->entries = copy_matrix(matrix_1, half_dim);
+    matrix_2->entries = copy_matrix(matrix_1->entries, half_dim);
     fill_matrix(matrix_3, INFINITO);
 
     MPI_Barrier(MPI_COMM_WORLD);
