@@ -7,7 +7,7 @@
 #define ROOT 0
 #define INFINITO 99999
 
-void malloc_matrix(int **matrix, int dim){
+void malloc_matrix(int ***matrix, int dim){
     //Allocate dim^2 contiguous items
     int *p = (int*)malloc(dim*dim*sizeof(int*));
 
@@ -23,7 +23,8 @@ void malloc_matrix(int **matrix, int dim){
 
 
 int** createMatrix(int mat_d){
-    int **matrix, i, j;
+    int **matrix;
+    int i,j;
 
     matrix = malloc(sizeof(int*) * mat_d+1);
 
@@ -50,7 +51,7 @@ int** createMatrix(int mat_d){
 
 //Verify if is possible to construct matix
 int flag_func(int p, int n){
-    if(n%sqrt(p) != 0 || floor(sqrt(p)) != sqrt(p)){
+    if((n%(int)sqrt(p)) != 0 || floor(sqrt(p)) != sqrt(p)){
         printf("Algorithm not apply, Aborting!!!\n");
         return 0;
     }
@@ -62,9 +63,9 @@ int flag_func(int p, int n){
 int create_grid(GRID_TYPE *grid){
     int dim[2], vect_flag[2], coor[2], coor2[2];
 
-    MPI_Comm_size(MPI_COMM_WORLD, &(grid->p));
+    MPI_Comm_size(MPI_COMM_WORLD, &(grid->procs));
 
-    grid->q = (int)sqrt(grid->p);
+    grid->q = (int)sqrt(grid->procs);
     dim[0] = grid->q;
     dim[1] = grid->q;
 
@@ -91,12 +92,12 @@ int create_grid(GRID_TYPE *grid){
     //COLUMN_COMM_WORLD
     coor2[0] = 1;
     coor2[1] = 0;
-    MPI_Cart_sub(grid->comm, coor2, &(grid->col_comm))
+    MPI_Cart_sub(grid->comm, coor2, &(grid->col_comm));
 }
 
 //Allocation of the matrix type MATRIX structer
 MATRIX* malloc_MATRIX(int dim){
-    MATRIX* tmp = (MATRIX*malloc(sizeof(MATRIX)));
+    MATRIX* tmp = (MATRIX*)malloc(sizeof(MATRIX));
     tmp->dim = dim;
     malloc_matrix(&(tmp->entries), dim);
     return tmp;
@@ -104,6 +105,9 @@ MATRIX* malloc_MATRIX(int dim){
 
 //This is the main :/
 int main(int argc, char *argv[]) {
+    GRID_TYPE grid;
+    MATRIX *matrix1;
+    int half_dim;
     int n_procs, rank, q, mat_d, **matrix, f=0;
 
     MPI_Init(&argc, &argv);                                                                                                               │
@@ -125,14 +129,14 @@ int main(int argc, char *argv[]) {
         MPI_Bcast(&mat_d, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
         create_grid(&grid);
 
-        if(my_rank == ROOT){
+        if(rank == ROOT){
             matrix = createMatrix(mat_d);
         }
     }
 
     MPI_Bcast(&(matrix[0][0]), mat_d, MPI_INT, ROOT, MPI_COMM_WORLD);
 
-    half_dim = mat_d/grid->q;
+    half_dim = mat_d/grid.q;
     matrix1 = malloc_MATRIX(half_dim);
 
 
