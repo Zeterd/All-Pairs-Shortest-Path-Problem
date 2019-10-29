@@ -65,6 +65,7 @@ int** createMatrix(int mat_d){
 //Verify if is possible to construct matix
 int flag_func(int p, int n){
 
+
     if((n%(int)sqrt(p)) != 0 || floor(sqrt(p)) != (int)sqrt(p)){
         printf("Algorithm not apply, Aborting!!!\n");
         return 0;
@@ -106,6 +107,7 @@ void create_grid(GRID_TYPE *grid){
     //COLUMN_COMM_WORLD
     coor2[0] = 1;
     coor2[1] = 0;
+
     MPI_Cart_sub(grid->comm, coor2, &(grid->col_comm));
 }
 
@@ -177,7 +179,7 @@ void submatrix(int **m, GRID_TYPE* grid, MATRIX* matrix_aux){
         }
     }
 }
-//ask
+//fill the matrix with a value, used to fill the result matrix with infinit
 void fill_matrix(MATRIX* m, int v){
     int i,j;
 
@@ -187,8 +189,6 @@ void fill_matrix(MATRIX* m, int v){
       }
     }
 }
-
-
 
 //This is the main :/
 int main(int argc, char *argv[]) {
@@ -209,18 +209,22 @@ int main(int argc, char *argv[]) {
         f=1;
     }
 
+    if(f == 1){
+      MPI_Finalize();
+      return 0;
+    }
 
     //set the flag to the others processors
     MPI_Bcast(&f, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
 
-    if(f != 1){
-        MPI_Bcast(&mat_d, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
-        create_grid(&grid);
 
-        if(rank == ROOT){
-            matrix = createMatrix(mat_d);
-        }
+    MPI_Bcast(&mat_d, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
+    create_grid(&grid);
+
+    if(rank == ROOT){
+        matrix = createMatrix(mat_d);
     }
+
 
     MPI_Bcast(&(matrix[0][0]), mat_d, MPI_INT, ROOT, MPI_COMM_WORLD);
 
