@@ -7,8 +7,23 @@
 #define ROOT 0
 #define INFINITO 99999
 
+void malloc_matrix(int **matrix, int dim){
+    //Allocate dim^2 contiguous items
+    int *p = (int*)malloc(dim*dim*sizeof(int*));
+
+    //Allocate the row pointers into the memory
+    *matrix = (int**)malloc(dim*sizeof(int*));
+
+    //Set uo pointers
+    int i;
+    for(i=0; i<dim; i++){
+        *matrix[i] = &(p[i*dim]);
+    }
+}
+
+
 int** createMatrix(int mat_d){
-    int **matrix;
+    int **matrix, i, j;
 
     matrix = malloc(sizeof(int*) * mat_d+1);
 
@@ -79,14 +94,15 @@ int create_grid(GRID_TYPE *grid){
     MPI_Cart_sub(grid->comm, coor2, &(grid->col_comm))
 }
 
-MATRIX* malloc_matrix(int dim){
+//Allocation of the matrix type MATRIX structer
+MATRIX* malloc_MATRIX(int dim){
     MATRIX* tmp = (MATRIX*malloc(sizeof(MATRIX)));
     tmp->dim = dim;
-    //Falta alocar a matrix em memoria
-
+    malloc_matrix(&(tmp->entries), dim);
     return tmp;
 }
 
+//This is the main :/
 int main(int argc, char *argv[]) {
     int n_procs, rank, q, mat_d, **matrix, f=0;
 
@@ -117,7 +133,8 @@ int main(int argc, char *argv[]) {
     MPI_Bcast(&(matrix[0][0]), mat_d, MPI_INT, ROOT, MPI_COMM_WORLD);
 
     half_dim = mat_d/grid->q;
-    matrix1 = malloc_matrix(half_dim);
+    matrix1 = malloc_MATRIX(half_dim);
+
 
 
 
