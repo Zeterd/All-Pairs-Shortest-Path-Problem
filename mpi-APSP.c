@@ -106,6 +106,7 @@ MATRIX* malloc_MATRIX(int dim){
 //Implementation of the FOX algorithm
 void fox(GRID_TYPE* grid, MATRIX* m1, MATRIX* m2, MATRIX* m3, int dim){
     int org, dest, i, root;
+    MATRIX* m_tmp;
 
 
     org = (grid->my_row+1) % grid->q;
@@ -125,17 +126,74 @@ void fox(GRID_TYPE* grid, MATRIX* m1, MATRIX* m2, MATRIX* m3, int dim){
 
         MPI_Send(&(m2->entries[0][0]), dim*dim, MPI_INT, dest, 0, grid->col_comm);
         MPI_Recv(&(m2->entries[0][0]), dim*dim, MPI_INT, org, 0, grid->col_comm, MPI_STATUS_IGNORE);
-  
+
+    }
+}
+//print the matrix
+void print_matrix(int **m, int dim){
+    int i,j;
+    for(i=0;i<dim;i++){
+        printf("%d", m[i][0]);
+        for(j=0;j<dim; j++){
+            printf(" %d", m[i][j]);
+        }
+        printf("\n");
+    }
+}
+//Basacly the name explains it self
+void copy_matrix(int **m, int dim){
+    int **m_tmp, i, j;
+    malloc_matrix(&m_tmp, dim);
+
+    for(i=0; i<dim; i++){
+        for(j=0; j<dim; j++){
+            m_tmp[i][j] = m[i][j]
+        }
+    }
+    return m_tmp;
+}
+//ask
+void submatrix(int **m, GRID_TYPE* grid, MATRIX* matrix_aux){
+    int i,j;
+    for(i=0; i<matrix_aux->dim; i++){
+        for(j=0; j<matrix_aux->dim; j++){
+            int index_i = grid->my_row*matrix_aux->dim+i;
+            int index_j = grid->my_col*matrix_aux->dim+j;
+            matrix_aux->entries[i][j] = m[index_i][index_j];
+        }
+    }
+}
+//ask
+void fill_matrix(MATRIX* m, int v){
+    int i,j;
+
+    for(i=0; i<m->dim; i++){
+      for(j=0; j<m->dim; j++){
+          m->entries8[i][j] = v;
+      }
     }
 }
 
+//The operation to multiply the values
+void operation_multiply(MATRIX* m1, MATRIX* m2, MATRIX* m3){
+    int i,j,k;
+
+    for(i=0; i<m1->dim; i++){
+        for(j=0; j<m1->dim; j++){
+            for(k=0; k<m2->dim; k++){
+              if((m1->entries[i][k]+m2->entries[k][j])<m3->entries[i][j])
+                m3->entries[i][j] = m1->entries[i][k]+m2->entries[k][j];
+            }
+        }
+    }
+}
 
 //This is the main :/
 int main(int argc, char *argv[]) {
     GRID_TYPE grid;
-    MATRIX *matrix_1, *matrix_2;
-    int half_dim;
-    int n_procs, rank, q, mat_d, **matrix, f=0;
+    MATRIX *matrix_1, *matrix_2, *matrix_3;
+    int half_dim, start, finish;
+    int n_procs, rank, q, mat_d, **matrix, **matrix_res, f=0;
 
     MPI_Init(&argc, &argv);                                                                                                               │
     MPI_Comm_size(MPI_COMM_WORLD, &n_procs);
@@ -168,7 +226,7 @@ int main(int argc, char *argv[]) {
     matrix_2 = malloc_MATRIX(half_dim);
     matrix_3 = malloc_MATRIX(half_dim);
 
-    get_submatrix(matrix, &grid, matrix_1)
+    get_submatrix(matrix, &grid, matrix_1);
 
     matrix_2->entries = copy_matrix(matrix_1, half_dim);
     fill_matrix(matrix_3, INFINITO);
@@ -180,9 +238,55 @@ int main(int argc, char *argv[]) {
     int i;
     for(i=1; i<mat_d-1; i*=2){
         fox(&grid, matrix_1, matrix_2, matrix_3, half_dim);
+        matrix_1->entries = copy_matrix(matrix_3->entries, half_dim);
+        matrix_2->entries = copy_matrix(matrix_3->entries, half_dim);
+    }
 
+    malloc_matrix(&matrix_res, half_dim);
+    int j;
 
+    if(rank == ROOT){
+        MPI_Send(&(matrix_3->entries[0][0]), half_dim*half_dim, MPI_INT, ROOT, 0, MPI_COMM_WORLD);
 
     }
 
+    else {
+        for(i=0; i<half_dim; i++){
+              for(j=0; j<half_dim; j++){
+                  if(matrix_3->entries[i][j] == INFINITO)
+                    matrix[i][j] = 0;
+                  else
+                    matrix[i][j] = matrix_3->entries[i][j];
+              }
+        }
+        for(i=1;i<n_procs;i++){
+            MPI_Recv(&(matrix_res[0][0]), half_dim*half_dim, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+            int r = i/grid.q;
+            int c = i%grid.q;
+
+
+            int k;
+            for(k=0; k<half_dim; k++){
+              for(j=0; j<half_dim; j++){
+                if(matrix_res[k][j] == INFINITO)
+                    matrix[r*half_dim+k][c*half_dim+j] = 0;
+                else
+                  matrix[r*half_dim+k][c*half_dim+j] = matrix_res[k][j];
+              }
+            }
+
+        }
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    finish = MPI_Wtime();
+
+    if(rank == ROOT){
+        printf("Execution time: %lf\n", finish-start);
+        print_matrix(matrix, mat_d);
+    }
+
+    MPI_Finalize();
+    return 0;
 }
