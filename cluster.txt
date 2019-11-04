@@ -1,0 +1,2 @@
+# Cluster of nodes of the machines in the labs
+
