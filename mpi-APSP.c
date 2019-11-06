@@ -5,8 +5,9 @@
 #include "structs_funcs.h"
 
 #define ROOT 0
-#define INFINITO 99999
+#define INFINIT 99999
 
+//alloca memora para a matriz
 void malloc_matrix(int ***matrix, int dim){
     //Allocate dim^2 contiguous items
     int *p = (int*)malloc(dim*dim*sizeof(int*));
@@ -14,7 +15,7 @@ void malloc_matrix(int ***matrix, int dim){
     //Allocate the row pointers into the memory
     (*matrix) = (int**)malloc(dim*sizeof(int*));
 
-    //Set uo pointers
+    //Set up pointers
     int i;
     for(i=0; i<dim; i++){
         (*matrix)[i] = &(p[i*dim]);
@@ -24,10 +25,11 @@ void malloc_matrix(int ***matrix, int dim){
 //The operation to multiply the values
 void operation_multiply(MATRIX* m1, MATRIX* m2, MATRIX* m3){
     int i,j,k;
-
-    for(i=0; i<m1->dim; i++){
-        for(j=0; j<m1->dim; j++){
-            for(k=0; k<m2->dim; k++){
+    printf("dim of mat 1/2/3: %d %d %d\n", m1->dim, m2->dim, m3->dim);
+    printf("CARLH ESTOU AQUI!!!!\n");
+    for(i=0; i!=m1->dim; i++){
+        for(j=0; j!=m1->dim; j++){
+            for(k=0; k!=m2->dim; k++){
               if((m1->entries[i][k]+m2->entries[k][j])<m3->entries[i][j])
                 m3->entries[i][j] = m1->entries[i][k]+m2->entries[k][j];
             }
@@ -35,6 +37,7 @@ void operation_multiply(MATRIX* m1, MATRIX* m2, MATRIX* m3){
     }
 }
 
+//criaçao da matrix atraves de valores input
 void createMatrix(int **matrix, int mat_d){
     int i,j;
 
@@ -42,7 +45,7 @@ void createMatrix(int **matrix, int mat_d){
         for(j=0; j<mat_d; j++){
             scanf("%d", &matrix[i][j]);
             if(i != j && (matrix[i][j] == 0))
-              matrix[i][j] = INFINITO;
+              matrix[i][j] = INFINIT;
         }
     }
 }
@@ -50,13 +53,13 @@ void createMatrix(int **matrix, int mat_d){
 //Verify if is possible to construct matix
 int flag_func(int p, int n){
 
-
     if((n%(int)sqrt(p)) != 0 || floor(sqrt(p)) != (int)sqrt(p)){
         printf("Algorithm not apply, Aborting!!!\n");
         return 0;
     }
-    else
-      return 1;
+    else{
+        return 1;
+    }
 }
 
 //Creation of the grid
@@ -109,11 +112,11 @@ void fox(GRID_TYPE* grid, MATRIX* m1, MATRIX* m2, MATRIX* m3, int dim){
     int org, dest, i, root;
     MATRIX* m_tmp;
 
-
     org = (grid->my_row+1) % grid->q;
     dest = (grid->my_row + grid->q-1) % grid->q;
 
     m_tmp = malloc_MATRIX(dim);
+
     for(i=0; i<grid->q; i++){
         root = (grid->my_row+i)%grid->q;
         if(root == grid->my_col){
@@ -183,6 +186,7 @@ int main(int argc, char *argv[]) {
     double finish, start;
     int n_procs, rank, mat_d, **matrix, **matrix_res, f=0;
 
+    // Inicializaçao do MPI
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &n_procs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -190,17 +194,19 @@ int main(int argc, char *argv[]) {
     if(rank == ROOT){
       scanf("%d", &mat_d);
 
+      //Caso o algoritmo nao seja possivel ser aplicado
       if(flag_func(n_procs, mat_d) == 0)
         f=1;
     }
 
+    //set the flag to the others processors
+    MPI_Bcast(&f, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
+
+    //termina o programa caso o algoritmo nao seja aplicado
     if(f == 1){
       MPI_Finalize();
       return 0;
     }
-
-    //set the flag to the others processors
-    MPI_Bcast(&f, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
 
     create_grid(&grid);
 
@@ -224,30 +230,32 @@ int main(int argc, char *argv[]) {
 
     matrix_2->entries = copy_mat(matrix_1->entries, half_dim);
 
-    fill_matrix(matrix_3, INFINITO);
+    fill_matrix(matrix_3, INFINIT);
 
     MPI_Barrier(MPI_COMM_WORLD);
     start = MPI_Wtime();
 
-    //the "start" of execution of the algorithm
+    //the "start" of execution what we want mesure the time of the algorithm
     int i, j;
     for(i=1; i<mat_d-1; i*=2){
+        //Algorithm
         fox(&grid, matrix_1, matrix_2, matrix_3, half_dim);
+
         matrix_1->entries = copy_mat(matrix_3->entries, half_dim);
         matrix_2->entries = copy_mat(matrix_3->entries, half_dim);
     }
+
 
     malloc_matrix(&matrix_res, half_dim);
 
     if(rank != ROOT){
         MPI_Send(&(matrix_3->entries[0][0]), half_dim*half_dim, MPI_INT, ROOT, 0, MPI_COMM_WORLD);
-
     }
 
     else {
         for(i=0; i<half_dim; i++){
               for(j=0; j<half_dim; j++){
-                  if(matrix_3->entries[i][j] == INFINITO)
+                  if(matrix_3->entries[i][j] == INFINIT)
                     matrix[i][j] = 0;
                   else
                     matrix[i][j] = matrix_3->entries[i][j];
@@ -263,7 +271,7 @@ int main(int argc, char *argv[]) {
             int k;
             for(k=0; k<half_dim; k++){
               for(j=0; j<half_dim; j++){
-                if(matrix_res[k][j] == INFINITO)
+                if(matrix_res[k][j] == INFINIT)
                     matrix[r*half_dim+k][c*half_dim+j] = 0;
                 else
                   matrix[r*half_dim+k][c*half_dim+j] = matrix_res[k][j];

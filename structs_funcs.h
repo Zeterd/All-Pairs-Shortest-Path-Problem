@@ -10,7 +10,7 @@ typedef struct {
     int       my_rank;
 } GRID_TYPE;
 
-//struct of a Matriz
+//Struct of a Matriz
 typedef struct {
     int  dim;
     int  **entries;
