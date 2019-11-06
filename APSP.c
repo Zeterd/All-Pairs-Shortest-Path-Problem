@@ -9,6 +9,7 @@ The all pairs of shortest paths problem (APSP) is to find a shortest path from u
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 #define MAX_VALUE 9999999
 
 
@@ -20,7 +21,8 @@ void printMatriz(int mat_d, int **new_mat);
 int main() {
     int i=0, j=0;
     int mat_d;
-
+    clock_t t;
+    
     scanf("%d", &mat_d);
 
     int **matrix;
@@ -50,13 +52,16 @@ int main() {
     int **new_mat;
 
     new_mat = matrix;
-
+    t = clock();
     while(m<n_rows-1){
         new_mat = matrix_sum(new_mat, new_mat, mat_d);
 
         m = 2*m;
     }
 
+    t = clock() - t;
+    double time_taken = ((double)t)/CLOCKS_PER_SEC;
+    printf("%f seconds\n", time_taken);
     printMatriz(mat_d, new_mat);
     return 0;
 }
