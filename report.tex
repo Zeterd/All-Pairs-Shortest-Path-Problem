@@ -1,0 +1,127 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[portuguese]{babel}
+\usepackage[utf8]{inputenc} 
+\usepackage{natbib}
+\author{José Pedro Sousa}
+\title{Computaçao Paralela parte1}
+\begin{document}
+
+%pagina de rosto
+\begin{titlepage}
+	\centering
+	{\scshape\LARGE Faculdade de Ciências da Universidade do Porto \par}
+	\vspace{1cm}
+	{\scshape\Large Computação Paralela\par}
+	\vspace{1.5cm}
+	{\huge\bfseries All-Pairs Shortest Path Problem\par}
+	\vspace{2cm}
+	{\Large\itshape José Pedro Sousa\par}
+	{\Large\itshape 201503443\par}
+	\vfill
+
+	{\large \today\par}
+\end{titlepage}
+%\tableofcontents
+\section{Intrudução}
+\subsection{Ambito}
+    Este trabalho consistiu numa implementação de um problema dada na unidade curricular Computação Paralela  e que permite ao estudante adquirir e praticar a experiência na programação em computação paralela para ambientes de memoria partilhada usando uma libraria da linguagem de programação C chamada MPI.\par
+
+    \subsection{Descrição do Problema}
+        O objetivo deste projeto é uma implementação ao problema \textit{All-Pairs Shortest Path Problem} que basicamente dando um grafo dirijido G=(V,E) em que V  é um conjunto de vertices(nos) e E é um conjunto de arestas(ramos) entre os nós, em que a finalidade é determinar para cada par de nós (vi, vj) o caminho minimo que começa no vetice vi e termine no vertice vj. Um caminho é uma sequência de arestas(ramos) em que o vertice final e o vertice inicial de dois consecutivos ramos são os mesmos. Um ramo pode ser visto como um tuplo da forma (vi, vj, c) em que vi é o vertice inicial(origem), vj é o vertice final(destino) e o c é o tamanho do ramo entre os vertices vi e vj. O tamanho de um caminho será a soma de os ramos entre vi e vj.
+        
+\section{Algoritmo}
+        \subsection{Ideia}
+            Para que a implementação da solução seja possivel, o dado grafo dirigido irá ser representado numa matriz D1 com dimensão NxN em que cada emlemento (i,j) da matriz representa o tamanho do ramo entre vertice vi e o vertice vj. O valor zero representa que a coneccção entre os dois vertices caso não existe.
+            
+            Para solucionar este problema através da implementação de matrizes, irá ser usada um calculo modificado de multiplicação entre matrizes. Esta multiplicação é uma adaptação da forma como se multiplica as matrizes, na qual as operações de multiplicação e soma sao substituidas por operaçoes de soma e minimo respetivamente.
+        
+            A ideia do algoritmo é modificar o modo de executar este tipo de multiplicações de matrizes que foi mencionado, a uma certa quantidade de vezes para calcular os caminhos minimos entre os pares de vertices. Para que isto seja possivel são usados dois algoritmos: \textit{Repeated Squaring Algorithm} e \textit{Fox Algortihm}.
+            
+            \subsubsection{Repeated Squaring Algorithm}
+                Este algoritmo utiliza uma propriedade simples que melhora o numero de vezes que é necessario fazer a multiplicação de matrizes para alcançar a solução desejada. Por outras palavras, este algoritmo permite obter a matriz Df da matriz D1(matriz inicial) construindo sucessivamente matrizes D2=D1xD1, D4=D2xD2, D8=D4xD4,... até Df=DgxDg com f>=N e g<N.
+                
+                
+            \subsubsection{Fox's Algorithm}
+                \textit{Fox} é um algoritmo usado para fazer parte na multiplicação de matrizes sendo eficiênte num ambiente de computação paralelo. No contexto deste problema, o algoritmo \textit{fox} foi alterado para realmente calcular os caminhos minimos em vez de multiplicar numeros. Este algoritmo ira dividir a matriz com tamanho N em submatrizes para que cada processador P possa calcular a submatriz soluçao de tamanho N/Q.  
+                
+                No entanto para que este algoritmo seja possivel aplicar irá ter que obdeccer algumas regras relativamente ao numero de processaores e ao tamanho da matriz inserida. Dado um tamanho N da matrix inserida e P numero de processadores, existe Q tal que P=Q*Q e N mod Q seja igual a zero.
+        
+        Para computar o resultado de cada sub-matriz, cada processador irá ter que tracar informação com o outro processador na mesma linha e na mesma coluna da sub-matriz. Aplicando assim sucessivamente estes dois algoritmos (Fox's e Repeated Squaring) iremos ter a matriz soluçao Df ao problema. 
+
+        A solução do problema sera representado numa matriz final Df com dimensoes NxN em que cada elemento (i,j) da matriz corresponde ao tamanho do caminho minimo de todos os possiveis caminhos entre o vertice vi e o vertice vj.
+        
+        \subsection{Implementação}
+            A implementaçao que foi usada na parte da contruçao do algoritmo \textit{Fox} foi baseada pela implementação do livro \textit{Parallel Programming With MPI} do autor \textit{Peter S. Pacheco}. Na implementação foi criada dois ficheiros em que num é onde se insere o \textit{main} do programa e noutro para as \textit{structs}. Foi criada uma \textit{struct} para a grid(\textit{GRID\_TYPE}) que irá facilitar o acesso a informações do processador dentro da topologia da grid. 
+            
+            O algoritmo \textit{Repeated Squaring} foi implementado globalmente no código, ou seja, qualquer processo tem o mesmo acesso ao codigo para calcular este algoritmo. Em cada iteraçao do calculo da multiplicaçao de cada matriz é chamado o algoritmo Fox. Antes de cada iteração devemos garantir que cada processador tem a sua submatriz. Depois do calculo do algoritmo Fox, o resultado da submatriz com este algoritmo sera a submatriz para a iteração seguinte.
+            
+            No final do calculo o processador \textit{ROOT}(processador com rank 0) irá agregar todas as submatrizes de todos os processadores que calcularam e irá juntar numa só matriz que será a matriz final, ou seja, a matriz resultado(sera inprimido para o output, usando a função \textit{print\_matrix()}).
+            
+            Para além das funções usadas para o calculo do algoritmo Fox, tambem foram criadas outras funções para a alocação de memoria, copias de matrizes, criação da matriz e da grid, etc. As mais relevantes destas funções foram a \textit{create\_grid()} que faz a configuração e inicialização da grid inicial utilizando a struct \textit{GRID\_TYPE}, também a função \textit{flag\_func()} que irá validar se o algoritmo pode ser implementado de acordo com as regras mencionadas na secção 2.1.2, caso não seja possivel, uma menssagem de erro irá aparecer no output e terminará o programa. Outra função que foi construida de maior relevancia foi o \textit{operation\_multiply()}. Esta função implementa o calculo especial para a multiplicação de matrizes mencionada na seccçao 2.1.
+            
+        \section{Performace}
+            Reativamente há execução do programa, foi testado usando um \textit{cluster} de computadores com cada um 4 cores, sendo num tota maximo operacional de 64 cores. 
+            
+            Para compilar este programa basta executar o comando \textit{\$make} de seguidamente para executar ou correr o programa \textit{\$mpirun --hostfile hostfile -np P fox}, em que o P é o numero de processadores que pretende executar.
+            
+            No final da execução do programa, irá ser imprimido para o output do terminal uma contagem do tempo de execução e a matriz final da execução. Caso não seja possivel a execução do algoritmo uma menssagem de erro ira ser imprimida.
+            
+            Infelizmente o programa tem algumas limitaçoes, uma delas e mais relevante foi que durante a execuçao de alguns testes para matrizes de grandes dimensões e com numero de processadores relativamente pequeno, a execuçao nao parava e entraria num ciclo infinito de execuçao.
+            \newline
+            \newline
+            \newline
+            \subsection{Resultados}
+                O programa foi testado para varias matrizes de varias dimensões(6,300,600,900) com varios numeros de processadores(1, 4, 9, 16, 25, 36, 64). Foram feitos dois testes com mas mesmas configurações, mas em horarios diferentes de utilização das maquinas.
+                Estes foram os seguintes resultados(em ms):\newline
+                
+                
+                \begin{tabular}{ |p{1.6cm}||p{1.5cm}|p{1.5cm}|p{1.5cm}|p{1.5cm}|p{1.5cm}|p{1.5cm}|p{1.5cm}| }
+                 \hline
+                 \multicolumn{8}{|c|}{Teste nº 1} \\
+                    \hline
+                    Dim:CPU & 1 & 4 & 9 & 16 & 25 & 36 & 64\\
+                     \hline
+                     6   & 0.123 & 0.075 & 1.246 & ANA & ANA & 4.371 & ANA\\
+                     300 & NF & NF & 615.9 & 435.809 & 448.663 & 407.106 & ANA\\
+                     600 & NF & NF & NF & NF & 3067.375 & 2901.086 & 1668.257\\
+                     900 & NF & NF & NF & NF & NF & NF & ANA\\
+                 
+                 \hline
+                \end{tabular}
+                \break
+                
+                
+                \begin{tabular}{ |p{1.6cm}||p{1.5cm}|p{1.5cm}|p{1.5cm}|p{1.5cm}|p{1.5cm}|p{1.5cm}|p{1.5cm}| }
+                 \hline
+                 \multicolumn{8}{|c|}{Teste nº 2} \\
+                    \hline
+                    Dim:CPU & 1 & 4 & 9 & 16 & 25 & 36 & 64\\
+                     \hline
+                     6   & 0.134 & 0.093 & 1.545 & ANA & ANA & 4.454 & ANA\\
+                     300 & NF & NF & 622.351 & 433.63 & 453.236 & 410.208 & ANA\\
+                     600 & NF & NF & NF & NF & 3097.365 & 2060.921 & 1643.242\\
+                     900 & NF & NF & NF & NF & NF & NF & ANA\\
+                 
+                 \hline
+                \end{tabular}
+                \break
+                
+                NF: Nao Finalizado
+                
+                ANA: Algoritmo Nao Aplicado
+                
+                Dim: Dimensão da matriz
+                
+                \section{Conlusão}
+                    Concluimos assim de acordo com os resultados que para matrizes de maiores dimensões, ao fazer o acrescimo de numero de processadores executados, iremos ter uma diminuição de tempo de execução, ou seja, uma maior rapidez e eficiencia na execuçao do algoritmo para calcular a solução ao problema \textit{All-Pairs Shortest Path Problem}.
+                    
+                    
+            
+                   
+                
+            
+            
+            
+
+
+\end{document}
