@@ -3,11 +3,11 @@
 #include <mpi.h>
 #include <math.h>
 #include "structs_funcs.h"
-#include <unistd.h>
 
 #define ROOT 0
-#define INFINITO 99999
+#define INF 99999
 
+//Allocate the matrix in memory
 void malloc_matrix(int ***matrix, int dim){
     //Allocate dim^2 contiguous items
     int *p = (int*)malloc(dim*dim*sizeof(int*));
@@ -25,8 +25,7 @@ void malloc_matrix(int ***matrix, int dim){
 //The operation to multiply the values
 void operation_multiply(MATRIX* m1, MATRIX* m2, MATRIX* m3){
     int i,j,k;
-    //printf("dim of mat 1/2/3: %d %d %d\n", m1->dim, m2->dim, m3->dim);
-    //printf("CARLH ESTOU AQUI!!!!\n");
+
     for(i=0; i< m1->dim; i++){
         for(j=0; j< m1->dim; j++){
             for(k=0; k< m2->dim; k++){
@@ -36,8 +35,9 @@ void operation_multiply(MATRIX* m1, MATRIX* m2, MATRIX* m3){
             }
         }
     }
-    //printf("coordenadas no loop:     i: %d    j:%d    k:%d\n", i,j,k);
 }
+
+//create matrix from the input
 void createMatrix(int **matrix, int mat_d){
     int i,j;
 
@@ -45,7 +45,7 @@ void createMatrix(int **matrix, int mat_d){
         for(j=0; j<mat_d; j++){
             scanf("%d", &matrix[i][j]);
             if(i != j && (matrix[i][j] == 0))
-              matrix[i][j] = INFINITO;
+              matrix[i][j] = INF;
         }
     }
 }
@@ -53,13 +53,11 @@ void createMatrix(int **matrix, int mat_d){
 //Verify if is possible to construct matix
 int flag_func(int p, int n){
 
-
     if((n%(int)sqrt(p)) != 0 || floor(sqrt(p)) != (int)sqrt(p)){
         printf("Algorithm not apply, Aborting!!!\n");
         return -1;
     }
     else{
-      //printf("All good to go!!\n");
       return 1;
     }
 }
@@ -70,7 +68,6 @@ void create_grid(GRID_TYPE *grid){
     MPI_Comm_size(MPI_COMM_WORLD, &(grid->procs));
 
     grid->q = (int)sqrt(grid->procs);
-    //printf("Sieze of grid: %d\n", grid->q);
 
     dim[0] = grid->q;
     dim[1] = grid->q;
@@ -112,60 +109,43 @@ MATRIX* malloc_MATRIX(int dim){
 //Implementation of the FOX algorithm
 void fox(GRID_TYPE* grid, MATRIX* m1, MATRIX* m2, MATRIX* m3, int dim){
     int org, dest, i, root;
-    //MPI_Request req;
     MATRIX* m_tmp;
 
     org = (grid->my_row+1) % grid->q;
     dest = (grid->my_row + grid->q-1) % grid->q;
 
-    //printf("org: %d, dest: %d\n", org, dest);
-
     m_tmp = malloc_MATRIX(dim);
+
     for(i=0; i<grid->q; i++){
         root = (grid->my_row+i)%grid->q;
         if(root == grid->my_col){
             MPI_Bcast(&(m1->entries[0][0]), dim*dim, MPI_INT, root, grid->row_comm);
-            //printf("PROC: %d          ", grid->my_rank);
             operation_multiply(m1,m2,m3);
         }
         else{
             MPI_Bcast(&(m_tmp->entries[0][0]), dim*dim, MPI_INT, root, grid->row_comm);
-            //printf("PROC: %d          ", grid->my_rank);
             operation_multiply(m_tmp,m2,m3);
         }
 
-        //printf("antes fora rank %d\n", grid->my_rank);
-        //if(org != dest){
-                //printf("antes dentro rank %d\n", grid->my_rank);
-                //MPI_Isend(&(m2->entries[0][0]), dim*dim, MPI_INT, dest, 0, grid->col_comm, &req);
         MPI_Send(&(m2->entries[0][0]), dim*dim, MPI_INT, dest, 0, grid->col_comm);
-                //printf("no meio\n");
-                //printf("depois SEND dentro rank %d\n", grid->my_rank);
 
-                //sleep(1);
-        //MPI_Wait(&req, MPI_STATUS_IGNORE);
         MPI_Recv(&(m2->entries[0][0]), dim*dim, MPI_INT, org, 0, grid->col_comm, MPI_STATUS_IGNORE);
-                //MPI_Irecv(&(m2->entries[0][0]), dim*dim, MPI_INT, org, 0, grid->col_comm, &req);
-                //printf("depois REVC dentro rank %d\n", grid->my_rank);
-        //}
-        //printf("depois fora rank %d\n", grid->my_rank);
-      }
-}
 
+      }
 }
 //print the matrix
 void print_matrix(int **m, int dim){
     int i,j;
-    //printf("%d\n", dim);
+
     for(i=0;i<dim;i++){
-        //printf("(%d,%d)-%d", i,j,m[i][0]);
         for(j=0;j<dim; j++){
             printf("%d ", m[i][j]);
         }
         printf("\n");
     }
 }
-//Basacly the name explains it self
+
+//copy matrix into another one
 int** copy_mat(int **m, int dim){
     int **m_tmp, i, j;
     malloc_matrix(&m_tmp, dim);
@@ -177,7 +157,8 @@ int** copy_mat(int **m, int dim){
     }
     return m_tmp;
 }
-//ask
+
+//create the submatrix of a main one
 void submatrix(int **m, GRID_TYPE* grid, MATRIX* matrix_aux){
     int i,j;
     for(i=0; i<matrix_aux->dim; i++){
@@ -188,7 +169,8 @@ void submatrix(int **m, GRID_TYPE* grid, MATRIX* matrix_aux){
         }
     }
 }
-//fill the matrix with a value, used to fill the result matrix with infinit
+
+//fill the matrix with a value, used to fill the result matrix with INF
 void fill_matrix(MATRIX* m, int v){
     int i,j;
 
@@ -198,7 +180,8 @@ void fill_matrix(MATRIX* m, int v){
       }
     }
 }
-//This is the main :/
+
+//Main Program
 int main(int argc, char *argv[]) {
     GRID_TYPE grid;
     MATRIX *matrix_1, *matrix_2, *matrix_3;
@@ -213,17 +196,14 @@ int main(int argc, char *argv[]) {
     if(rank == ROOT){
       scanf("%d", &mat_d);
 
-      if(flag_func(n_procs, mat_d) == -1){
+      if(flag_func(n_procs, mat_d) == -1)
         f = -1;
-      }
+
     }
 
     MPI_Bcast(&f, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
-    //printf("rank_proc: %d  flag: %d\n", rank, f);
-
 
     if(f == -1){
-      //printf("finalizei o programa");
       MPI_Finalize();
       return 0;
     }
@@ -234,29 +214,21 @@ int main(int argc, char *argv[]) {
 
     malloc_matrix(&matrix, mat_d);
 
-    if(rank == ROOT){
+    if(rank == ROOT)
         createMatrix(matrix, mat_d);
-        //printf("Matrix created with size: %d\n", mat_d);
-    }
-
 
     MPI_Bcast(&(matrix[0][0]), mat_d*mat_d, MPI_INT, ROOT, MPI_COMM_WORLD);
 
     half_dim = mat_d/grid.q;
-matrix_1 = malloc_MATRIX(half_dim);
+    matrix_1 = malloc_MATRIX(half_dim);
     matrix_2 = malloc_MATRIX(half_dim);
     matrix_3 = malloc_MATRIX(half_dim);
-
-    //printf("matriz 1 dim: %d\n", matrix_1->dim);
-    //printf("matriz 2 dim: %d\n", matrix_2->dim);
-    //printf("matriz 3 dim: %d\n", matrix_3->dim);
-
 
     submatrix(matrix, &grid, matrix_1);
 
     matrix_2->entries = copy_mat(matrix_1->entries, half_dim);
 
-    fill_matrix(matrix_3, INFINITO);
+    fill_matrix(matrix_3, INF);
 
     MPI_Barrier(MPI_COMM_WORLD);
     start = MPI_Wtime();
@@ -264,27 +236,22 @@ matrix_1 = malloc_MATRIX(half_dim);
     //the "start" of execution of the algorithm
     int i, j;
     for(i=1; i<mat_d-1; i*=2){
-        //printf("iterator loop fox: %d\n", i);
-        //printf("Working in the algorithm!! Processor num: %d\n", rank);
         fox(&grid, matrix_1, matrix_2, matrix_3, half_dim);
 
         matrix_1->entries = copy_mat(matrix_3->entries, half_dim);
         matrix_2->entries = copy_mat(matrix_3->entries, half_dim);
 
-       //printf("Number of cicles fox algorithm is taken so far: %d\n", i);
-
     }
-malloc_matrix(&matrix_res, half_dim);
 
-    if(rank != ROOT){
+    malloc_matrix(&matrix_res, half_dim);
+
+    if(rank != ROOT)
         MPI_Send(&(matrix_3->entries[0][0]), half_dim*half_dim, MPI_INT, ROOT, 0, MPI_COMM_WORLD);
-
-    }
 
     else {
         for(i=0; i<half_dim; i++){
               for(j=0; j<half_dim; j++){
-                  if(matrix_3->entries[i][j] == INFINITO)
+                  if(matrix_3->entries[i][j] == INF)
                     matrix[i][j] = 0;
                   else
                     matrix[i][j] = matrix_3->entries[i][j];
@@ -296,17 +263,15 @@ malloc_matrix(&matrix_res, half_dim);
             int r = i/grid.q;
             int c = i%grid.q;
 
-
             int k;
             for(k=0; k<half_dim; k++){
               for(j=0; j<half_dim; j++){
-                if(matrix_res[k][j] == INFINITO)
+                if(matrix_res[k][j] == INF)
                     matrix[r*half_dim+k][c*half_dim+j] = 0;
                 else
                   matrix[r*half_dim+k][c*half_dim+j] = matrix_res[k][j];
               }
             }
-
         }
     }
 

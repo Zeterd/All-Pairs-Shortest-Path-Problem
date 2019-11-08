@@ -1,5 +1,4 @@
 # compile the program
 
-compile: mpi-APSP.c fox
-	rm -f -- fox
+compile: mpi-APSP.c
 	mpicc mpi-APSP.c -o fox -lm
